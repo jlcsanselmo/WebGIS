@@ -53,7 +53,7 @@ MAPBIOMAS_CLASSES = {
 }
 
 
-# Função para obter os dados do MapBiomas a partir de um polígono
+# Função para obter os dados do gráfico
 def get_mapbiomas_data(geojson):
     try:
         polygon = ee.Geometry.Polygon(geojson['coordinates'])
@@ -72,7 +72,7 @@ def get_mapbiomas_data(geojson):
         )
 
         class_areas = areas.get('groups').getInfo()
-        data = [{"class": item['class'], "area": item['sum'] / 10000} for item in class_areas]  # ha
+        data = [{"class": item['class'], "area": item['sum'] / 10000} for item in class_areas]  # hectares
 
         return data
 
@@ -81,11 +81,13 @@ def get_mapbiomas_data(geojson):
         return []
 
 
+# Página inicial
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
+# Endpoint para o gráfico de área
 @app.route("/get_chart", methods=["POST"])
 def get_chart():
     try:
@@ -99,13 +101,11 @@ def get_chart():
         if not data:
             return jsonify({"error": "Não foi possível processar os dados"}), 500
 
-        # Extrai dados para o gráfico
         labels = [MAPBIOMAS_CLASSES.get(d['class'], {}).get('nome', f"Classe {d['class']}") for d in data]
         values = [round(d['area'], 2) for d in data]
         colors = [MAPBIOMAS_CLASSES.get(d['class'], {}).get('cor', '#cccccc') for d in data]
-        
         class_ids = [d['class'] for d in data]
-        
+
         return jsonify({
             "labels": labels,
             "values": values,
@@ -118,5 +118,39 @@ def get_chart():
         return jsonify({"error": "Erro interno no servidor"}), 500
 
 
+# Novo endpoint: camada raster do MapBiomas recortada
+@app.route("/get_mapbiomas_tile", methods=["POST"])
+def get_mapbiomas_tile():
+    try:
+        geojson = request.get_json()
+        if not geojson or 'coordinates' not in geojson:
+            return jsonify({"error": "GeoJSON inválido"}), 400
+
+        polygon = ee.Geometry.Polygon(geojson['coordinates'])
+
+        mapbiomas = ee.Image("projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1")
+        band = mapbiomas.select("classification_2023")
+        clipped = band.clip(polygon)
+
+        palette = [MAPBIOMAS_CLASSES.get(i, {}).get('cor', '#000000').replace('#', '') for i in range(63)]
+
+        vis_params = {
+            'min': 0,
+            'max': 62,
+            'palette': palette
+        }
+
+        map_id = clipped.getMapId(vis_params)
+
+        return jsonify({
+            "tile_url": map_id['tile_fetcher'].url_format
+        })
+
+    except Exception as e:
+        print(f"Erro no endpoint /get_mapbiomas_tile: {e}")
+        return jsonify({"error": "Erro interno"}), 500
+
+
+# Roda o app
 if __name__ == "__main__":
     app.run(debug=True)
