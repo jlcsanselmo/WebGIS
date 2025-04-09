@@ -14,10 +14,47 @@
 </head>
 <body>
 
+     <!-- NAVIGATION BAR -->
+     <div class="nav">
+        <div class="container">
+            <div class="btn">Home</div>
+            <div class="btn">GitHub</div>
+            <div class="btn">About</div>
+            <div class="btn">Contact</div>
+            <svg class="outline" overflow = "visible"
+                width="400"
+                heightt="60"
+                viewBox="0 0 400 60"
+                xmlns="http://www.w3.org/2000/svg"
+                <rect class="rect" pathLength="100"
+                    x="0" y="0" 
+                    width="400" 
+                    height="60"
+                    fill="transparent"
+                    stroke-width="5"
+                ></rect> 
+            </svg>
+        </div>    
+    </div>
+
     <div id="map"></div>
-
+    
+   
     <button id="showChartBtn" class="btn btn-primary">Ver Gráfico de Áreas</button>
-
+    
+    <div id="polygonToggleContainer" class="leaflet-top leaflet-right" style="display: none;">
+        <div class="leaflet-control leaflet-bar" style="background: white; padding: 8px;">
+          <input class="form-check-input" type="checkbox" id="togglePolygon" checked>
+          <label class="form-check-label" for="togglePolygon" style="margin-left: 4px;">
+            <label class="form-check-label" for="togglePolygon" title="Ative ou desative a exibição do polígono no mapa">
+                Mostrar Polígono
+              </label>
+          </label>
+        </div>
+      </div>
+      
+      
+      
     <!-- Modal -->
     <div class="modal fade" id="chartModal" tabindex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
