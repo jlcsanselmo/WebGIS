@@ -22,3 +22,80 @@ html, body {
     left: 20px;
     z-index: 1000;
 }
+
+/* NAVBAR SOBREPOSTA */
+.nav {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 60px;
+    z-index: 1001; /* acima do mapa */
+    pointer-events: auto; /* garante que a navbar seja clicável */
+}
+
+.container {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6); /* fundo escuro transparente */
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0.5em;
+    border-radius: 8px;
+}
+
+.btn {
+    padding: 0.5em 1.5em;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.1s;
+    border-radius: 4px;
+}
+
+.btn:hover {
+    background: #fff;
+    color: #000;
+}
+
+/* animações do SVG decorativo */
+.outline {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.rect {
+    stroke-dashoffset: 5;
+    stroke-dasharray: 0 0 10 40 10 40;
+    transition: 0.5s;
+    stroke: #fff;
+}
+
+.btn:nth-child(1):hover ~ svg .rect {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 0 2 8 73.3 8 10.7;
+}
+
+.btn:nth-child(2):hover ~ svg .rect {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 0 12.6 9.5 49.3 9.5 31.6;
+}
+
+.btn:nth-child(3):hover ~ svg .rect {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 0 24.5 8.5 27.5 8.5 55.5;
+}
+
+.btn:nth-child(4):hover ~ svg .rect {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 0 34.7 6.9 10.2 6.9 76;
+}
+
+.btn:hover ~ svg .outline {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 0 0 10 40 10 40;
+    transition: 0.5s;
+}
