@@ -4,7 +4,7 @@ import ee
 # Inicializa o Earth Engine
 try:
     ee.Initialize()
-except Exception as e:
+except Exception:
     ee.Authenticate()
     ee.Initialize(project='ee-jlcsanselmo')
 
@@ -53,45 +53,63 @@ MAPBIOMAS_CLASSES = {
 }
 
 
-# Função para obter os dados do gráfico
+def strip_third_dimension(coords):
+    """Remove a terceira dimensão das coordenadas"""
+    return [[ [pt[:2] for pt in ring] for ring in polygon ] for polygon in coords]
+
+def parse_geometry(geojson):
+    print("GeoJSON recebido:", geojson)
+
+    if not geojson or 'type' not in geojson or 'coordinates' not in geojson:
+        raise ValueError(f"GeoJSON inválido ou incompleto: {geojson}")
+
+    geo_type = geojson['type']
+    coords = geojson['coordinates']
+
+    if geo_type == 'Polygon':
+        cleaned_coords = [[pt[:2] for pt in ring] for ring in coords]
+        return ee.Geometry.Polygon(cleaned_coords)
+    elif geo_type == 'MultiPolygon':
+        cleaned_coords = strip_third_dimension(coords)
+        return ee.Geometry.MultiPolygon(cleaned_coords)
+    else:
+        raise ValueError(f"Tipo de geometria não suportado: {geo_type}")
+
+
 def get_mapbiomas_data(geojson):
     try:
-        polygon = ee.Geometry.Polygon(geojson['coordinates'])
+        geometry = parse_geometry(geojson)
 
         mapbiomas = ee.Image("projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1")
         bands = mapbiomas.select("classification_2023")
-
-        clipped = bands.clip(polygon)
+        clipped = bands.clip(geometry)
 
         area_image = ee.Image.pixelArea().addBands(clipped)
         areas = area_image.reduceRegion(
             reducer=ee.Reducer.sum().group(groupField=1, groupName='class'),
-            geometry=polygon,
+            geometry=geometry,
             scale=30,
             maxPixels=1e13
         )
 
         class_areas = areas.get('groups').getInfo()
-        data = [{"class": item['class'], "area": item['sum'] / 10000} for item in class_areas]  # hectares
-
+        data = [{"class": item['class'], "area": item['sum'] / 10000} for item in class_areas]
         return data
 
     except Exception as e:
-        print(f"Erro ao processar dados do MapBiomas: {e}")
+        print(f"[ERRO] get_mapbiomas_data: {e}")
         return []
 
 
-# Página inicial
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-# Endpoint para o gráfico de área
 @app.route("/get_chart", methods=["POST"])
 def get_chart():
     try:
-        geojson = request.get_json()
+        geojson = request.get_json(force=True)
 
         if not geojson or 'coordinates' not in geojson:
             return jsonify({"error": "GeoJSON inválido"}), 400
@@ -114,23 +132,22 @@ def get_chart():
         })
 
     except Exception as e:
-        print(f"Erro no endpoint /get_chart: {e}")
+        print(f"[ERRO] /get_chart: {e}")
         return jsonify({"error": "Erro interno no servidor"}), 500
 
 
-# Novo endpoint: camada raster do MapBiomas recortada
 @app.route("/get_mapbiomas_tile", methods=["POST"])
 def get_mapbiomas_tile():
     try:
-        geojson = request.get_json()
+        geojson = request.get_json(force=True)
         if not geojson or 'coordinates' not in geojson:
             return jsonify({"error": "GeoJSON inválido"}), 400
 
-        polygon = ee.Geometry.Polygon(geojson['coordinates'])
+        geometry = parse_geometry(geojson)
 
         mapbiomas = ee.Image("projects/mapbiomas-public/assets/brazil/lulc/collection9/mapbiomas_collection90_integration_v1")
         band = mapbiomas.select("classification_2023")
-        clipped = band.clip(polygon)
+        clipped = band.clip(geometry)
 
         palette = [MAPBIOMAS_CLASSES.get(i, {}).get('cor', '#000000').replace('#', '') for i in range(63)]
 
@@ -147,10 +164,9 @@ def get_mapbiomas_tile():
         })
 
     except Exception as e:
-        print(f"Erro no endpoint /get_mapbiomas_tile: {e}")
-        return jsonify({"error": "Erro interno"}), 500
+        print(f"[ERRO] /get_mapbiomas_tile: {e}")
+        return jsonify({"error": "Erro interno no servidor"}), 500
 
 
-# Roda o app
 if __name__ == "__main__":
     app.run(debug=True)
