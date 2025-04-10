@@ -15,6 +15,37 @@ html, body {
     z-index: 1;
 }
 
+.layer-switches {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 8px;
+    z-index: 1001;
+    width: 220px;
+  
+    /* Centraliza verticalmente e alinha com mesmo espaçamento do botão */
+    top: 50%;
+    left: 20px;
+    transform: translateY(-50%);
+    position: absolute;
+  }
+  
+  .layer-switches h6 {
+    color: white;
+  }
+  
+  .layer-switches .form-check-input:checked {
+    background-color: #ffffff;
+    border-color: #ffffff;
+  }
+  
+  .layer-switches .form-check-input,
+  .layer-switches .form-check-label {
+    cursor: pointer;
+  }
+  
+  .layer-switches .form-check-label {
+    color: white;
+  }
+  
 /* Botão sobreposto ao mapa */
 #showChartBtn {
     position: absolute;
