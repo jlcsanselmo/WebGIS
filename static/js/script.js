@@ -1,164 +1,199 @@
-let drawnPolygon = null;
-let areaChart = null; // gráfico global para destruir antes de redesenhar
+document.addEventListener("DOMContentLoaded", function () {
+    let drawnPolygon = null;
+    let areaChart = null;
+    let clickedFeature = null;
+    let geojsonLayer = null;
 
-// Inicializa o mapa centralizado no Brasil
-const map = L.map('map').setView([-10, -53], 4);
+    const map = L.map('map').setView([-10, -53], 4);
 
-// Camada base do OpenStreetMap
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-// Grupo para armazenar os polígonos desenhados
-const drawnItems = new L.FeatureGroup();
-map.addLayer(drawnItems);
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
 
-// Controle de desenho
-const drawControl = new L.Control.Draw({
-    draw: {
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        marker: false,
-        circlemarker: false,
-        polygon: {
-            allowIntersection: false,
-            showArea: true
-        }
-    },
-    edit: {
-        featureGroup: drawnItems
-    }
-});
-map.addControl(drawControl);
-
-// Evento de criação de polígono
-map.on(L.Draw.Event.CREATED, function (e) {
-    drawnItems.clearLayers();
-    drawnPolygon = e.layer;
-    drawnItems.addLayer(drawnPolygon);
-    document.getElementById('polygonToggleContainer').style.display = 'block';
-
-    // Controle de visibilidade do polígono
-document.getElementById('togglePolygon').addEventListener('change', function (e) {
-    if (drawnPolygon) {
-        if (e.target.checked) {
-            drawnPolygon.addTo(drawnItems);
-        } else {
-            drawnItems.removeLayer(drawnPolygon);
-        }
-    }
-});
-
-    // Remove camada anterior do MapBiomas se houver
-    if (window.mapbiomasLayer) {
-        map.removeLayer(window.mapbiomasLayer);
-    }
-
-    const geojson = drawnPolygon.toGeoJSON().geometry;
-
-    // Requisição para obter a imagem recortada do MapBiomas
-    fetch("/get_mapbiomas_tile", {
-        method: "POST",
-        headers: {
-            'Content-Type': 'application/json'
+    const drawControl = new L.Control.Draw({
+        draw: {
+            polyline: false,
+            rectangle: false,
+            circle: false,
+            marker: false,
+            circlemarker: false,
+            polygon: {
+                allowIntersection: false,
+                showArea: true
+            }
         },
-        body: JSON.stringify(geojson)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.tile_url) {
-            window.mapbiomasLayer = L.tileLayer(data.tile_url, {
-                attribution: "Fonte: MapBiomas via Earth Engine",
-                opacity: 0.6
-            }).addTo(map);
-        } else {
-            console.error("Erro ao carregar imagem do MapBiomas:", data.error);
+        edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
+
+    // Polígono visível
+    document.getElementById('togglePolygon').addEventListener('change', function (e) {
+        if (drawnPolygon) {
+            e.target.checked ? drawnItems.addLayer(drawnPolygon) : drawnItems.removeLayer(drawnPolygon);
         }
-    })
-    .catch(error => console.error("Erro ao buscar camada MapBiomas:", error));
-});
+    });
 
-// Botão para gerar gráfico
-document.getElementById("showChartBtn").addEventListener("click", function () {
-    if (!drawnPolygon) {
-        alert("Desenhe um polígono primeiro.");
-        return;
-    }
+    // Desenho manual
+    map.on(L.Draw.Event.CREATED, function (e) {
+        drawnItems.clearLayers();
+        drawnPolygon = e.layer;
+        clickedFeature = null;
+        drawnItems.addLayer(drawnPolygon);
+        document.getElementById('polygonToggleContainer').style.display = 'block';
+        loadMapbiomasTile(getGeometryOnly(drawnPolygon.toGeoJSON().geometry));
+    });
 
-    const geojson = drawnPolygon.toGeoJSON().geometry;
+    // Gera gráfico
+    document.getElementById("showChartBtn").addEventListener("click", function () {
+        let geometry = drawnPolygon
+            ? getGeometryOnly(drawnPolygon.toGeoJSON().geometry)
+            : clickedFeature
+            ? getGeometryOnly(clickedFeature)
+            : null;
 
-    fetch("/get_chart", {
-        method: "POST",
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(geojson)
-    })
-    .then(response => response.json())
-    .then(data => {
-        const labels = data.labels;
-        const values = data.values;
-        const colors = data.colors;
-
-        const ctx = document.getElementById("areaChart").getContext("2d");
-
-        // Destrói gráfico anterior se houver
-        if (areaChart) {
-            areaChart.destroy();
+        if (!geometry) {
+            alert("Desenhe ou selecione um polígono primeiro.");
+            return;
         }
 
-        // Cria novo gráfico
-        areaChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Área (ha)',
-                    data: values,
-                    backgroundColor: colors,
-                    borderColor: colors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function (context) {
-                                return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} ha`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function (value) {
-                                return value.toLocaleString();
+        fetch("/get_chart", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(geometry)
+        })
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById("areaChart").getContext("2d");
+                if (areaChart) areaChart.destroy();
+
+                areaChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Área (ha)',
+                            data: data.values,
+                            backgroundColor: data.colors,
+                            borderColor: data.colors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} ha`
+                                }
                             }
                         },
-                        title: {
-                            display: true,
-                            text: 'Área (hectares)'
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'Área (hectares)' }
+                            }
                         }
                     }
+                });
+
+                new bootstrap.Modal(document.getElementById('chartModal')).show();
+            })
+            .catch(error => console.error("Erro ao buscar gráfico:", error));
+    });
+
+    function loadMapbiomasTile(geojson) {
+        if (window.mapbiomasLayer) map.removeLayer(window.mapbiomasLayer);
+
+        fetch("/get_mapbiomas_tile", {
+            method: "POST",
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(geojson)
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.tile_url) {
+                    window.mapbiomasLayer = L.tileLayer(data.tile_url, {
+                        attribution: "Fonte: MapBiomas via Earth Engine",
+                        opacity: 0.6
+                    }).addTo(map);
                 }
-            }
-        });
+            })
+            .catch(err => console.error("Erro ao carregar tiles do MapBiomas:", err));
+    }
 
-        // Exibe modal com gráfico
-        new bootstrap.Modal(document.getElementById('chartModal')).show();
-    })
-    .catch(error => console.error("Erro ao buscar gráfico:", error));
-});
+    function getGeometryOnly(geometry) {
+        return {
+            type: geometry.type,
+            coordinates: geometry.coordinates
+        };
+    }
 
-// Ajusta mapa após carregamento da página
-window.addEventListener('load', function () {
-    setTimeout(() => {
-        map.invalidateSize();
-    }, 200);
+    // Carrega camada do GeoServer sem adicionar ao mapa
+    function carregarCamadaGeoServer() {
+        fetch("http://localhost:8080/geoserver/sigef/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=sigef:Sigef_Brasil&outputFormat=application/json")
+            .then(res => res.json())
+            .then(data => {
+                geojsonLayer = L.geoJSON(data, {
+                    style: { color: 'blue', weight: 1, fillOpacity: 0.1 },
+                    onEachFeature: function (feature, layer) {
+                        layer.on('click', function () {
+                            if (drawnPolygon) map.removeLayer(drawnPolygon);
+
+                            const tempLayer = L.geoJSON(feature, {
+                                style: { color: 'red', weight: 2, fillOpacity: 0.3 }
+                            });
+
+                            drawnPolygon = tempLayer.getLayers()[0];
+                            drawnItems.clearLayers();
+                            drawnItems.addLayer(drawnPolygon);
+                            document.getElementById('polygonToggleContainer').style.display = 'block';
+
+                            clickedFeature = feature.geometry;
+
+                            new bootstrap.Modal(document.getElementById('confirmModal')).show();
+                        });
+                    }
+                });
+
+                // Verifica estado do checkbox após carregar
+                const toggle = document.getElementById("toggleGeoServer");
+                if (toggle.checked) {
+                    map.addLayer(geojsonLayer);
+                }
+            })
+            .catch(err => console.error("Erro ao carregar camada GeoServer:", err));
+    }
+
+    // Inicia com o checkbox desligado e define comportamento
+    const geoToggle = document.getElementById("toggleGeoServer");
+    geoToggle.checked = false;
+    geoToggle.addEventListener("change", function (e) {
+        if (!geojsonLayer) return;
+        if (e.target.checked) {
+            map.addLayer(geojsonLayer);
+        } else {
+            map.removeLayer(geojsonLayer);
+        }
+    });
+
+    // Confirmação modal
+    document.getElementById("confirmClipBtn").addEventListener("click", function () {
+        if (!clickedFeature) return;
+
+        loadMapbiomasTile(getGeometryOnly(clickedFeature));
+
+        const modalEl = document.getElementById('confirmModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+    });
+
+    carregarCamadaGeoServer();
+
+    window.addEventListener('load', () => {
+        setTimeout(() => map.invalidateSize(), 200);
+    });
 });
