@@ -6,6 +6,7 @@
 
   <!-- CSS externos -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 
@@ -27,6 +28,12 @@
     </div>
   </div>
 
+  <style>
+    .nav .btn {
+      color: white !important;
+    }
+  </style>
+  
   <!-- Painel de camadas com switches -->
 <div class="layer-switches position-absolute p-3 rounded">
   <h6 class="fw-bold mb-3 text-white">Camadas</h6>
@@ -35,20 +42,114 @@
     <label class="form-check-label text-white" for="toggleGeoServer">SIGEF</label>
   </div>
   <div class="form-check form-switch">
-    <input class="form-check-input" type="checkbox" id="toggleMapbiomas" checked>
-    <label class="form-check-label text-white" for="toggleMapbiomas">MapBiomas</label>
+    <input class="form-check-input" type="checkbox" id="toggleCAR" checked>
+    <label class="form-check-label text-white" for="toggleMapbiomas">CAR</label>
+  </div>
+</div>
+<div class="form-check form-switch">
+  <input class="form-check-input" type="checkbox" id="toggleHidrografia" checked>
+  <label class="form-check-label text-white" for="toggleMapbiomas">Hidrográfias</label>
+</div>
+</div>
+<div class="form-check form-switch">
+  <input class="form-check-input" type="checkbox" id="toggleEmbargos" checked>
+  <label class="form-check-label text-white" for="toggleMapbiomas">Embargos</label>
+</div>
+</div>
+
+<!-- Container fixo na lateral -->
+<div id="basemapControl" class="position-fixed" style="top: 50%; right: 10px; transform: translateY(-50%); z-index: 1000;">
+  <!-- Botão principal -->
+  <button class="btn btn-light" id="btnToggleBasemap">
+    <i class="bi bi-map-fill"></i>
+  </button>
+
+  <!-- Caixa de opções com previews -->
+  <div id="basemapOptions" class="card shadow-sm"
+       style="display: none; position: absolute; top: 0; right: 60px; min-width: 220px;">
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item basemap-option d-flex align-items-center" data-map="osm">
+        <div class="basemap-thumb me-2" style="background-image: url('https://a.tile.openstreetmap.org/10/512/384.png');"></div>
+        OpenStreetMap
+      </li>
+      <li class="list-group-item basemap-option d-flex align-items-center" data-map="esri">
+        <div class="basemap-thumb me-2" style="background-image: url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/10/384/512');"></div>
+        Satélite ESRI
+      </li>
+    </ul>
   </div>
 </div>
 
+<style>
+  .basemap-thumb {
+    width: 40px;
+    height: 40px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  .list-group-item.basemap-option {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .list-group-item.basemap-option:hover {
+    background-color: #f8f9fa;
+  }
+
+  #basemapOptions {
+    border-radius: 6px;
+  }
+</style>
 
   <!-- MAPA -->
   <div id="map"></div>
 
   <!-- BOTÃO DE GRÁFICO -->
-  <button id="showChartBtn" class="btn btn-primary" style="position: absolute; bottom: 20px; left: 20px; z-index: 1000;">
+  <button id="showChartBtn" class="btn btn-primary" style="display: none; position: absolute; bottom: 20px; left: 20px; z-index: 1000;">
     Ver Gráfico de Áreas
+  </button>  
+ <!-- BOTÃO DE EXCLUIR POLIG -->
+  <button id="clearSelectionBtn" class="btn btn-outline-danger" style="display: none; position: absolute; bottom: 70px; left: 20px; z-index: 1000;" title="Remover polígono">
+    <i class="bi bi-x-circle"></i>
   </button>
 
+  <!-- Botão para mostrar o controle de opacidade -->
+<button id="toggleOpacityBtn" class="btn btn-light"
+style="position: absolute; top: 100px; right: 10px; z-index: 1001; display: none;" 
+title="Ajustar transparência">
+<i class="bi bi-sliders"></i>
+</button>
+
+<!-- Painel de controle de opacidade -->
+<div id="opacityControl"
+    style="position: absolute; top: 150px; right: 10px; z-index: 1001; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; display: none;">
+    <label for="opacitySlider" style="color:white;">Transparência</label>
+    <input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="0.6" style="width: 100%;">
+</div>
+
+  <!-- MODAL CONFIRMAÇÃO DE REMOÇÃO DO POLIG-->
+<div class="modal fade" id="removePolygonModal" tabindex="-1" aria-labelledby="removePolygonModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="removePolygonModalLabel">Remover Polígono</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        Deseja realmente remover o polígono?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirmRemoveBtn">Sim, remover</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
   <!-- TOGGLE POLÍGONO -->
   <div id="polygonToggleContainer" class="leaflet-top leaflet-right" style="display: none;">
     <div class="leaflet-control leaflet-bar" style="background: white; padding: 8px;">
@@ -59,22 +160,29 @@
     </div>
   </div>
 
-  <!-- MODAL GRÁFICO -->
-  <div class="modal fade" id="chartModal" tabindex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="chartModalLabel">Gráfico de Áreas</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+ <!-- MODAL GRÁFICO -->
+<div class="modal fade" id="chartModal" tabindex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="chartModalLabel">Gráfico de Áreas</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Gráfico -->
+        <div id="chartContainer" class="mb-4">
+          <canvas id="areaChart"></canvas>
         </div>
-        <div class="modal-body">
-          <div id="chartContainer">
-            <canvas id="areaChart"></canvas>
-          </div>
+
+        <!-- Tabela com classes e áreas -->
+        <div id="tableContainer">
+          <!-- Tabela será inserida via JavaScript -->
         </div>
       </div>
     </div>
   </div>
+</div>
+
 
   <!-- MODAL CONFIRMAÇÃO -->
   <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
