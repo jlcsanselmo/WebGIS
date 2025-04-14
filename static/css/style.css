@@ -15,37 +15,36 @@ html, body {
     z-index: 1;
 }
 
+/* Painel de camadas */
 .layer-switches {
     background: rgba(0, 0, 0, 0.6);
     border-radius: 8px;
     z-index: 1001;
     width: 220px;
-  
-    /* Centraliza verticalmente e alinha com mesmo espaçamento do botão */
     top: 50%;
     left: 20px;
     transform: translateY(-50%);
     position: absolute;
-  }
-  
-  .layer-switches h6 {
+}
+
+.layer-switches h6 {
     color: white;
-  }
-  
-  .layer-switches .form-check-input:checked {
+}
+
+.layer-switches .form-check-input:checked {
     background-color: #ffffff;
     border-color: #ffffff;
-  }
-  
-  .layer-switches .form-check-input,
-  .layer-switches .form-check-label {
+}
+
+.layer-switches .form-check-input,
+.layer-switches .form-check-label {
     cursor: pointer;
-  }
-  
-  .layer-switches .form-check-label {
+}
+
+.layer-switches .form-check-label {
     color: white;
-  }
-  
+}
+
 /* Botão sobreposto ao mapa */
 #showChartBtn {
     position: absolute;
@@ -54,7 +53,7 @@ html, body {
     z-index: 1000;
 }
 
-/* NAVBAR SOBREPOSTA */
+/* Navbar sobreposta */
 .nav {
     position: absolute;
     top: 20px;
@@ -62,14 +61,14 @@ html, body {
     transform: translateX(-50%);
     width: 400px;
     height: 60px;
-    z-index: 1001; /* acima do mapa */
-    pointer-events: auto; /* garante que a navbar seja clicável */
+    z-index: 1001;
+    pointer-events: auto;
 }
 
 .container {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6); /* fundo escuro transparente */
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     flex-direction: row;
     justify-content: space-around;
@@ -78,15 +77,15 @@ html, body {
     border-radius: 8px;
 }
 
-.btn {
+.nav-btn {
     padding: 0.5em 1.5em;
-    color: #fff;
+    color: #fff !important;
     cursor: pointer;
     transition: 0.1s;
     border-radius: 4px;
 }
 
-.btn:hover {
+.nav-btn:hover {
     background: #fff;
     color: #000;
 }
@@ -129,4 +128,66 @@ html, body {
     stroke-dashoffset: 0;
     stroke-dasharray: 0 0 10 40 10 40;
     transition: 0.5s;
+}
+
+.basemap-selector-container {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000;
+}
+
+/* Botão de alternância de basemap */
+.basemap-toggle-btn {
+    background-color: white;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.basemap-toggle-btn:hover {
+    background-color: #f0f0f0;
+    border-color: #999;
+}
+
+/* Menu de basemap */
+.basemap-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 50px;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    width: 120px;
+    overflow: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.basemap-menu.hidden {
+    opacity: 0;
+    transform: translateY(-10%);
+    pointer-events: none;
+}
+
+.basemap-option {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.basemap-option:hover {
+    background-color: #f5f5f5;
+}
+
+.basemap-option:last-child {
+    border-bottom: none;
 }
